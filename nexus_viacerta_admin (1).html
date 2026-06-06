@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Viacerta Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  :root {
+    --navy:#0d1b2e;--navy-card:#112240;--navy-border:#1e3a5f;--navy-hover:#1a2f4a;
+    --teal:#00c896;--teal-dim:#00c89618;--amber:#f5a623;--red:#e84855;--blue-soft:#4a9eff;
+    --text-primary:#e8f0fe;--text-secondary:#7a9cc4;--text-muted:#4a6a8a;
+    --gold:#c8a84b;--silver:#8a9bb0;--bronze:#a0674a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--navy);font-family:'Inter',sans-serif;color:var(--text-primary);min-height:100vh}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid var(--navy-border)}
+  .topbar-brand{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text-secondary);letter-spacing:.08em}
+  .topbar-brand span{color:var(--teal);font-weight:700}
+  .topbar-brand .sep{color:var(--navy-border);margin:0 4px}
+  .topbar-date{font-size:12px;color:var(--text-muted)}
+  .topbar-badge{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--teal);display:flex;align-items:center;gap:6px}
+  .main{max-width:1160px;margin:0 auto;padding:28px 24px}
+  .header-card{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:14px;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .header-left{display:flex;align-items:center;gap:16px}
+  .header-icon{width:46px;height:46px;background:var(--teal-dim);border:1px solid #00c89644;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .header-title{font-size:18px;font-weight:600}
+  .header-sub{font-size:12px;color:var(--text-secondary);margin-top:3px}
+  .badge-updated{background:var(--teal-dim);border:1px solid #00c89644;color:var(--teal);font-size:12px;font-weight:500;padding:5px 14px;border-radius:20px;display:none}
+  .badge-updated.show{display:inline-block}
+  .section-label{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px}
+  .upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  .upload-box{background:#0a1628;border:1px solid var(--navy-border);border-radius:10px;padding:16px 18px}
+  .upload-box-title{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px}
+  .file-status{font-size:12px;color:var(--teal);margin-bottom:10px;min-height:18px;display:flex;align-items:center;gap:6px}
+  .file-status.empty{color:var(--text-muted)}
+  .file-input{display:none}
+  .btn-upload{width:100%;background:var(--navy-card);border:1px solid var(--navy-border);color:var(--text-secondary);font-size:13px;font-family:'Inter',sans-serif;padding:9px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+  .btn-upload:hover{background:var(--navy-hover);color:var(--text-primary);border-color:var(--teal)}
+  .status-bar{background:#0a1628;border:1px solid var(--navy-border);border-radius:10px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .status-msg{font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:8px}
+  .btn-publish{background:var(--amber);color:#1a1000;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s}
+  .btn-publish:hover{background:#f7b83a}
+  .btn-publish:disabled{opacity:.4;cursor:not-allowed}
+  .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--navy-border);border:1px solid var(--navy-border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+  .metric-cell{background:var(--navy-card);padding:20px 24px}
+  .metric-label{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px}
+  .metric-value{font-size:26px;font-weight:700;color:var(--text-primary);line-height:1;margin-bottom:4px}
+  .metric-sub{font-size:11px;color:var(--text-muted)}
+  .sort-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+  .sort-label{font-size:12px;color:var(--text-muted)}
+  .sort-btns{display:flex;gap:6px;flex-wrap:wrap}
+  .btn-sort{background:transparent;border:1px solid var(--navy-border);color:var(--text-secondary);font-size:12px;font-family:'Inter',sans-serif;padding:6px 14px;border-radius:20px;cursor:pointer;transition:all .2s}
+  .btn-sort:hover{border-color:var(--teal);color:var(--text-primary)}
+  .btn-sort.active{background:var(--teal);border-color:var(--teal);color:#001a10;font-weight:600}
+  .btn-export{background:transparent;border:1px solid var(--navy-border);color:var(--text-secondary);font-size:12px;font-family:'Inter',sans-serif;padding:6px 14px;border-radius:20px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s}
+  .btn-export:hover{border-color:var(--blue-soft);color:var(--blue-soft)}
+  .btn-reset{background:transparent;border:1px solid #e8485544;color:#e84855;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;padding:10px 18px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s}
+  .btn-reset:hover{background:#e8485518;border-color:var(--red)}
+  .modal-overlay{display:none;position:fixed;inset:0;background:#00000088;z-index:100;align-items:center;justify-content:center}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:14px;padding:32px;max-width:420px;width:100%;margin:20px}
+  .modal-title{font-size:17px;font-weight:600;margin-bottom:8px}
+  .modal-desc{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:24px}
+  .modal-btns{display:flex;gap:10px;justify-content:flex-end}
+  .btn-cancel{background:transparent;border:1px solid var(--navy-border);color:var(--text-secondary);font-size:13px;font-family:'Inter',sans-serif;padding:9px 18px;border-radius:8px;cursor:pointer;transition:all .2s}
+  .btn-cancel:hover{border-color:var(--text-secondary);color:var(--text-primary)}
+  .btn-confirm-reset{background:var(--red);color:#fff;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;transition:all .2s}
+  .btn-confirm-reset:hover{background:#c73040}
+  .table-wrap{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{padding:12px 16px;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--navy-border);background:#0a1628}
+  thead th.right{text-align:right}
+  tbody tr{border-bottom:1px solid #0d1f35;transition:background .15s}
+  tbody tr:last-child{border-bottom:none}
+  tbody tr:hover{background:var(--navy-hover)}
+  td{padding:14px 16px;font-size:13px;color:var(--text-primary);vertical-align:middle}
+  td.right{text-align:right}
+  td.muted{color:var(--text-secondary);font-size:12px}
+  .rank-badge{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+  .rank-1{background:#2a2000;color:var(--gold);border:1px solid var(--gold)}
+  .rank-2{background:#1a1f28;color:var(--silver);border:1px solid var(--silver)}
+  .rank-3{background:#1f1208;color:var(--bronze);border:1px solid var(--bronze)}
+  .rank-n{background:#0d1b2e;color:var(--text-muted);border:1px solid var(--navy-border)}
+  .bar-cell{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .bar-track{width:90px;height:5px;background:#0a1628;border-radius:3px;overflow:hidden;flex-shrink:0}
+  .bar-fill{height:100%;border-radius:3px;transition:width .4s}
+  .bar-green{background:var(--teal)}.bar-amber{background:var(--amber)}.bar-red{background:var(--red)}
+  .pct-green{color:var(--teal);font-weight:600}.pct-amber{color:var(--amber);font-weight:600}.pct-red{color:var(--red);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .dot-green{background:var(--teal)}.dot-amber{background:var(--amber)}.dot-red{background:var(--red)}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--text-muted);font-size:14px}
+  .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <span>NEXUS</span><span class="sep">/</span>ASSESSORIA DE COBRANÇA
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="topbar-badge">⚙ ADMINISTRADOR</div>
+    <div class="topbar-date" id="topbar-date"></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="header-card">
+    <div class="header-left">
+      <div class="header-icon">📊</div>
+      <div>
+        <div class="header-title">Ranking de operadores — VIACERTA</div>
+        <div class="header-sub" id="header-sub">Carregue os arquivos para processar o ranking</div>
+      </div>
+    </div>
+    <div class="badge-updated" id="badge-updated">✓ Atualizado</div>
+  </div>
+
+  <div class="section-label">Upload de arquivos</div>
+  <div class="upload-grid">
+    <div class="upload-box">
+      <div class="upload-box-title">Analítico de pagamentos (CRM)</div>
+      <div class="file-status empty" id="status-analytic">Nenhum arquivo selecionado</div>
+      <label class="btn-upload" for="file-analytic">⬆ Selecionar arquivo</label>
+      <input class="file-input" type="file" id="file-analytic" accept=".xls,.xlsx">
+    </div>
+    <div class="upload-box">
+      <div class="upload-box-title">Metas dos operadores</div>
+      <div class="file-status empty" id="status-metas">Nenhum arquivo selecionado</div>
+      <label class="btn-upload" for="file-metas">⬆ Selecionar arquivo</label>
+      <input class="file-input" type="file" id="file-metas" accept=".xls,.xlsx">
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-msg" id="status-msg"><span style="color:var(--text-muted)">○</span> Aguardando arquivos para processar.</div>
+    <div style="display:flex;gap:10px">
+    <button class="btn-reset" id="btn-reset" onclick="abrirModalReinicio()">↺ Reiniciar ciclo</button>
+    <button class="btn-publish" id="btn-publish" disabled onclick="publicarDados()">⬆ Publicar para operação</button>
+  </div>
+  </div>
+
+  <div id="metrics-section" style="display:none">
+    <div class="metrics-grid">
+      <div class="metric-cell"><div class="metric-label">Total comissão</div><div class="metric-value" id="m-comissao">—</div><div class="metric-sub">no ciclo</div></div>
+      <div class="metric-cell"><div class="metric-label">Total recebido</div><div class="metric-value" id="m-recebido">—</div><div class="metric-sub">no ciclo</div></div>
+      <div class="metric-cell"><div class="metric-label">Operadores</div><div class="metric-value" id="m-ops">—</div><div class="metric-sub">com meta definida</div></div>
+      <div class="metric-cell"><div class="metric-label">Dias úteis restantes</div><div class="metric-value" id="m-du-rest">—</div><div class="metric-sub" id="m-du-sub">no ciclo</div></div>
+    </div>
+    <div class="sort-bar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="sort-label">Ordenar:</span>
+        <div class="sort-btns">
+          <button class="btn-sort active" onclick="sortBy('proj',event)">% Projeção</button>
+          <button class="btn-sort" onclick="sortBy('real',event)">% Realizado</button>
+          <button class="btn-sort" onclick="sortBy('comissao',event)">Comissão</button>
+          <button class="btn-sort" onclick="sortBy('nome',event)">Nome</button>
+        </div>
+      </div>
+      <button class="btn-export" onclick="exportCSV()">⬇ Exportar CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:48px">#</th>
+            <th>Operador</th>
+            <th class="right">Novos Acordos — Base</th>
+            <th class="right">Meta</th>
+            <th class="right">% Realizado</th>
+            <th class="right">Projeção R$</th>
+            <th class="right">% Projeção</th>
+            <th class="right">Novos Acordos</th>
+            <th class="right">Colchão</th>
+            <th class="right">Com. Total</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="empty-state" class="empty-state">
+    <div class="empty-icon">📋</div>
+    Carregue o analítico e o arquivo de metas para gerar o ranking
+  </div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBNZXz8oeW7ufVjOHr_G6bM16Ekdc4s230",
+    authDomain: "ranking-viacerta.firebaseapp.com",
+    databaseURL: "https://ranking-viacerta-default-rtdb.firebaseio.com",
+    projectId: "ranking-viacerta",
+    storageBucket: "ranking-viacerta.appspot.com",
+    messagingSenderId: "716274938152",
+    appId: "1:716274938152:web:viacerta"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const IGNORAR = ['(VAZIO)','TOTAL GERAL','9555 - PROCESSO AUTOMÁTICO','1186 - .','677 - IMPORTAÇÃO AUTOMATICA'];
+  let dadosRanking = [], sortAtual = 'proj', arquivos = {analytic:null, metas:null};
+  let payloadAtual = null;
+
+  const hoje = new Date();
+  document.getElementById('topbar-date').textContent = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+  function fmt(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+  function diasUteisNoMes(y,m){const d=new Date(y,m,0).getDate();let w=0;for(let i=1;i<=d;i++){const dow=new Date(y,m-1,i).getDay();if(dow!==0&&dow!==6)w++;}return w;}
+  function diasUteisAte(y,m,ate){let w=0;for(let i=1;i<=ate;i++){const dow=new Date(y,m-1,i).getDay();if(dow!==0&&dow!==6)w++;}return w;}
+
+  function readRaw(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];res(XLSX.utils.sheet_to_json(ws,{defval:'',header:1}));}catch(err){rej(err);}};r.onerror=rej;r.readAsArrayBuffer(file);});}
+  function readHeader(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];res(XLSX.utils.sheet_to_json(ws,{defval:''}));}catch(err){rej(err);}};r.onerror=rej;r.readAsArrayBuffer(file);});}
+
+  document.getElementById('file-analytic').addEventListener('change',function(){
+    if(!this.files[0])return;
+    arquivos.analytic=this.files[0];
+    document.getElementById('status-analytic').textContent='✓ '+this.files[0].name;
+    document.getElementById('status-analytic').classList.remove('empty');
+    tentarProcessar();
+  });
+  document.getElementById('file-metas').addEventListener('change',function(){
+    if(!this.files[0])return;
+    arquivos.metas=this.files[0];
+    document.getElementById('status-metas').textContent='✓ '+this.files[0].name;
+    document.getElementById('status-metas').classList.remove('empty');
+    tentarProcessar();
+  });
+
+  async function tentarProcessar(){
+    if(!arquivos.analytic||!arquivos.metas)return;
+    document.getElementById('status-msg').innerHTML='<span style="color:var(--amber)">◐</span> Processando dados...';
+    try{await processarDados();}catch(err){document.getElementById('status-msg').innerHTML='<span style="color:var(--red)">✗</span> Erro: '+err.message;}
+  }
+
+  async function processarDados(){
+    const [metasRaw,analytic]=await Promise.all([readRaw(arquivos.metas),readHeader(arquivos.analytic)]);
+    const metaMap={};
+    metasRaw.forEach(row=>{
+      if(!row||row.length<2)return;
+      const opOriginal=String(row[0]).trim();
+      const opNorm=opOriginal.toUpperCase();
+      const val=parseFloat(row[1])||0;
+      if(!opOriginal||IGNORAR.includes(opNorm))return;
+      metaMap[opNorm]={original:opOriginal,meta:val};
+    });
+
+    const curMonth=hoje.getMonth()+1,curYear=hoje.getFullYear(),curDay=hoje.getDate();
+    const totalWD=diasUteisNoMes(curYear,curMonth);
+    const workedWD=diasUteisAte(curYear,curMonth,curDay);
+    const restWD=totalWD-workedWD;
+
+    const opData={};
+    Object.keys(metaMap).forEach(k=>{opData[k]={vp16:0,cm16:0,cmNeg:0,cmTotal:0};});
+
+    let geralRecebido=0,geralComissao=0;
+
+    analytic.forEach(row=>{
+      const opRaw=String(row['Usuário Acordo']||'').trim();
+      if(!opRaw)return;
+      const recebido=parseFloat(row['Valor Recebido'])||0;
+      const comissao=parseFloat(row['Valor Comissão'])||0;
+      const dias=parseFloat(row['Dias atraso'])||0;
+      geralRecebido+=recebido;
+      geralComissao+=comissao;
+      const opNorm=opRaw.toUpperCase();
+      if(!opData[opNorm])return;
+      if(dias>=1){opData[opNorm].vp16+=recebido;opData[opNorm].cm16+=comissao;}
+      else{opData[opNorm].cmNeg+=comissao;}
+      opData[opNorm].cmTotal+=comissao;
+    });
+
+    dadosRanking=Object.keys(metaMap).map(opNorm=>{
+      const d=opData[opNorm];
+      const meta=metaMap[opNorm].meta;
+      const op=metaMap[opNorm].original;
+      const base=d.cm16;
+      const realPct=meta>0?(base/meta)*100:0;
+      const projVal=workedWD>0?(base/workedWD)*totalWD:0;
+      const projPct=meta>0?(projVal/meta)*100:0;
+      return{op,...d,meta,realPct,projVal,projPct,base};
+    });
+
+    document.getElementById('m-comissao').textContent=fmt(geralComissao);
+    document.getElementById('m-recebido').textContent=fmt(geralRecebido);
+    document.getElementById('m-ops').textContent=dadosRanking.length;
+    document.getElementById('m-du-rest').textContent=restWD;
+    document.getElementById('m-du-sub').textContent='de '+totalWD+' úteis no ciclo';
+
+    const mesAtual=hoje.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+    document.getElementById('header-sub').textContent='Ciclo '+mesAtual+' · '+workedWD+' dias úteis trabalhados de '+totalWD;
+
+    payloadAtual={ranking:dadosRanking,geralRecebido,geralComissao,totalWD,workedWD,restWD,atualizadoEm:new Date().toISOString()};
+
+    renderTabela();
+    document.getElementById('metrics-section').style.display='block';
+    document.getElementById('empty-state').style.display='none';
+    document.getElementById('badge-updated').classList.add('show');
+    document.getElementById('btn-publish').disabled=false;
+    document.getElementById('status-msg').innerHTML='<span style="color:var(--teal)">●</span> Dados processados e prontos para publicar para a operação.';
+  }
+
+  function renderTabela(){
+    let sorted=[...dadosRanking];
+    if(sortAtual==='proj')sorted.sort((a,b)=>b.projPct-a.projPct);
+    else if(sortAtual==='real')sorted.sort((a,b)=>b.realPct-a.realPct);
+    else if(sortAtual==='comissao')sorted.sort((a,b)=>b.cmTotal-a.cmTotal);
+    else if(sortAtual==='nome')sorted.sort((a,b)=>a.op.localeCompare(b.op));
+    const tbody=document.getElementById('table-body');
+    tbody.innerHTML='';
+    sorted.forEach((r,i)=>{
+      const rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+      const realClass=r.realPct>=100?'pct-green':r.realPct>=80?'pct-amber':'pct-red';
+      const projClass=r.projPct>=100?'pct-green':r.projPct>=80?'pct-amber':'pct-red';
+      const barClass=r.realPct>=100?'bar-green':r.realPct>=80?'bar-amber':'bar-red';
+      const barProjClass=r.projPct>=100?'bar-green':r.projPct>=80?'bar-amber':'bar-red';
+      const dotClass=r.projPct>=100?'dot-green':r.projPct>=80?'dot-amber':'dot-red';
+      const barW=Math.min(100,Math.round(r.realPct));
+      const barProjW=Math.min(100,Math.round(r.projPct));
+      const nome=r.op.replace(/^\d+\s*-\s*/,'');
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+        <td style="font-weight:600">${nome}</td>
+        <td class="right">${fmt(r.base)}</td>
+        <td class="right muted">${r.meta>0?fmt(r.meta):'—'}</td>
+        <td class="right"><div class="bar-cell"><div class="bar-track"><div class="bar-fill ${barClass}" style="width:${barW}%"></div></div><span class="${realClass}" style="min-width:46px">${r.realPct.toFixed(1)}%</span></div></td>
+        <td class="right muted">${fmt(r.projVal)}</td>
+        <td class="right"><div class="bar-cell"><span class="dot ${dotClass}"></span><div class="bar-track"><div class="bar-fill ${barProjClass}" style="width:${barProjW}%"></div></div><span class="${projClass}" style="min-width:46px">${r.projPct.toFixed(1)}%</span></div></td>
+        <td class="right muted" style="font-size:12px">${fmt(r.cm16)}</td>
+        <td class="right muted" style="font-size:12px">${fmt(r.cmNeg)}</td>
+        <td class="right" style="font-weight:600;color:var(--teal)">${fmt(r.cmTotal)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function sortBy(key,e){
+    sortAtual=key;
+    document.querySelectorAll('.btn-sort').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    renderTabela();
+  }
+
+  async function publicarDados(){
+    if(!payloadAtual)return;
+    const btn=document.getElementById('btn-publish');
+    btn.disabled=true;
+    btn.textContent='Publicando...';
+    try{
+      await db.ref('ranking/atual').set(payloadAtual);
+      document.getElementById('status-msg').innerHTML='<span style="color:var(--teal)">✓</span> Dados publicados para a operação com sucesso.';
+    }catch(err){
+      document.getElementById('status-msg').innerHTML='<span style="color:var(--red)">✗</span> Erro ao publicar: '+err.message;
+    }
+    btn.disabled=false;
+    btn.textContent='⬆ Publicar para operação';
+  }
+
+  function exportCSV(){
+    if(!dadosRanking.length)return;
+    let csv='#;Operador;Novos Acordos (base);Meta;% Realizado;Projeção R$;% Projeção;Novos Acordos;Colchão;Com. Total\n';
+    [...dadosRanking].sort((a,b)=>b.projPct-a.projPct).forEach((r,i)=>{
+      const nome=r.op.replace(/^\d+\s*-\s*/,'');
+      csv+=`${i+1};${nome};${r.base.toFixed(2)};${r.meta.toFixed(2)};${r.realPct.toFixed(1)}%;${r.projVal.toFixed(2)};${r.projPct.toFixed(1)}%;${r.cm16.toFixed(2)};${r.cmNeg.toFixed(2)};${r.cmTotal.toFixed(2)}\n`;
+    });
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='ranking_viacerta.csv';a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function reiniciarCiclo(){
+    const btn = document.getElementById('btn-confirm-reset');
+    btn.disabled = true;
+    btn.textContent = 'Arquivando...';
+    try{
+      // Busca ranking atual do Firebase
+      const snap = await db.ref('ranking/atual').get();
+      const atual = snap.val();
+      if(atual){
+        // Salva no histórico com chave do mês
+        const agora = new Date();
+        const chave = agora.toLocaleString('pt-BR',{month:'long',year:'numeric'}).replace(' de ',' ').replace(' ','-').toLowerCase();
+        const label = agora.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+        await db.ref('ranking/historico/'+chave).set({...atual, label});
+      }
+      // Limpa ranking atual
+      await db.ref('ranking/atual').remove();
+      fecharModal();
+      document.getElementById('status-msg').innerHTML='<span style="color:var(--teal)">✓</span> Ciclo reiniciado. Histórico salvo.';
+      document.getElementById('badge-updated').classList.remove('show');
+      document.getElementById('metrics-section').style.display='none';
+      document.getElementById('empty-state').style.display='block';
+      document.getElementById('btn-publish').disabled=true;
+      dadosRanking=[];
+      payloadAtual=null;
+      arquivos={analytic:null,metas:null};
+      document.getElementById('status-analytic').textContent='Nenhum arquivo selecionado';
+      document.getElementById('status-analytic').classList.add('empty');
+      document.getElementById('status-metas').textContent='Nenhum arquivo selecionado';
+      document.getElementById('status-metas').classList.add('empty');
+    }catch(err){
+      document.getElementById('status-msg').innerHTML='<span style="color:var(--red)">✗</span> Erro ao reiniciar: '+err.message;
+      fecharModal();
+    }
+  }
+
+  function abrirModalReinicio(){ document.getElementById('modal-reinicio').classList.add('show'); }
+  function fecharModal(){ document.getElementById('modal-reinicio').classList.remove('show'); }
+</script>
+
+<!-- MODAL REINÍCIO -->
+<div class="modal-overlay" id="modal-reinicio">
+  <div class="modal">
+    <div class="modal-title">⚠ Reiniciar ciclo</div>
+    <div class="modal-desc">O ranking atual será <strong>arquivado</strong> com o nome do mês e um novo ciclo será iniciado.<br><br>Esta ação não pode ser desfeita. Deseja continuar?</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm-reset" id="btn-confirm-reset" onclick="reiniciarCiclo()">Sim, reiniciar ciclo</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

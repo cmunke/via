@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Viacerta Operação</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  :root {
+    --navy:#0d1b2e;--navy-card:#112240;--navy-border:#1e3a5f;--navy-hover:#1a2f4a;
+    --teal:#00c896;--teal-dim:#00c89618;--amber:#f5a623;--red:#e84855;
+    --text-primary:#e8f0fe;--text-secondary:#7a9cc4;--text-muted:#4a6a8a;
+    --gold:#c8a84b;--silver:#8a9bb0;--bronze:#a0674a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--navy);font-family:'Inter',sans-serif;color:var(--text-primary);min-height:100vh}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid var(--navy-border)}
+  .topbar-brand{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text-secondary);letter-spacing:.08em}
+  .topbar-brand span{color:var(--teal);font-weight:700}
+  .topbar-brand .sep{color:var(--navy-border);margin:0 4px}
+  .topbar-date{font-size:12px;color:var(--text-muted)}
+  .main{max-width:1160px;margin:0 auto;padding:28px 24px}
+  .header-card{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:14px;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .header-left{display:flex;align-items:center;gap:16px}
+  .header-icon{width:46px;height:46px;background:var(--teal-dim);border:1px solid #00c89644;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .header-title{font-size:18px;font-weight:600}
+  .header-sub{font-size:12px;color:var(--text-secondary);margin-top:3px}
+  .badge-updated{background:var(--teal-dim);border:1px solid #00c89644;color:var(--teal);font-size:12px;font-weight:500;padding:5px 14px;border-radius:20px}
+  .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--navy-border);border:1px solid var(--navy-border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+  .metric-cell{background:var(--navy-card);padding:20px 24px}
+  .metric-label{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px}
+  .metric-value{font-size:26px;font-weight:700;color:var(--text-primary);line-height:1;margin-bottom:4px}
+  .metric-sub{font-size:11px;color:var(--text-muted)}
+  .sort-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .sort-label{font-size:12px;color:var(--text-muted)}
+  .sort-btns{display:flex;gap:6px;flex-wrap:wrap}
+  .btn-sort{background:transparent;border:1px solid var(--navy-border);color:var(--text-secondary);font-size:12px;font-family:'Inter',sans-serif;padding:6px 14px;border-radius:20px;cursor:pointer;transition:all .2s}
+  .btn-sort:hover{border-color:var(--teal);color:var(--text-primary)}
+  .btn-sort.active{background:var(--teal);border-color:var(--teal);color:#001a10;font-weight:600}
+  .table-wrap{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{padding:12px 16px;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--navy-border);background:#0a1628}
+  thead th.right{text-align:right}
+  tbody tr{border-bottom:1px solid #0d1f35;transition:background .15s}
+  tbody tr:last-child{border-bottom:none}
+  tbody tr:hover{background:var(--navy-hover)}
+  td{padding:14px 16px;font-size:13px;color:var(--text-primary);vertical-align:middle}
+  td.right{text-align:right}
+  td.muted{color:var(--text-secondary);font-size:12px}
+  .rank-badge{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+  .rank-1{background:#2a2000;color:var(--gold);border:1px solid var(--gold)}
+  .rank-2{background:#1a1f28;color:var(--silver);border:1px solid var(--silver)}
+  .rank-3{background:#1f1208;color:var(--bronze);border:1px solid var(--bronze)}
+  .rank-n{background:#0d1b2e;color:var(--text-muted);border:1px solid var(--navy-border)}
+  .bar-cell{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .bar-track{width:90px;height:5px;background:#0a1628;border-radius:3px;overflow:hidden;flex-shrink:0}
+  .bar-fill{height:100%;border-radius:3px}
+  .bar-green{background:var(--teal)}.bar-amber{background:var(--amber)}.bar-red{background:var(--red)}
+  .pct-green{color:var(--teal);font-weight:600}.pct-amber{color:var(--amber);font-weight:600}.pct-red{color:var(--red);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .dot-green{background:var(--teal)}.dot-amber{background:var(--amber)}.dot-red{background:var(--red)}
+  .empty-state{text-align:center;padding:80px 20px;color:var(--text-muted)}
+  .empty-icon{font-size:48px;margin-bottom:16px;opacity:.3}
+  .empty-title{font-size:16px;font-weight:500;margin-bottom:8px;color:var(--text-secondary)}
+  .empty-sub{font-size:13px}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);display:inline-block;margin-right:4px;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .tabs-bar{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;border-bottom:1px solid var(--navy-border);padding-bottom:0}
+  .tab-btn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text-muted);font-size:13px;font-family:'Inter',sans-serif;padding:10px 16px;cursor:pointer;transition:all .2s;margin-bottom:-1px;white-space:nowrap}
+  .tab-btn:hover{color:var(--text-secondary)}
+  .tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:500}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .hist-badge{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--text-muted);margin-bottom:16px;display:inline-block}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <span>NEXUS</span><span class="sep">/</span>ASSESSORIA DE COBRANÇA
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span style="font-size:12px;color:var(--text-muted)"><span class="live-dot"></span>Ao vivo</span>
+    <div class="topbar-date" id="topbar-date"></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="header-card">
+    <div class="header-left">
+      <div class="header-icon">📊</div>
+      <div>
+        <div class="header-title">Ranking de operadores — VIACERTA</div>
+        <div class="header-sub" id="header-sub">Conectando ao banco de dados...</div>
+      </div>
+    </div>
+    <div class="badge-updated" id="badge-atualizado" style="display:none">✓ Atualizado</div>
+  </div>
+
+  <div id="tabs-bar" class="tabs-bar" style="display:none"></div>
+
+  <div id="conteudo-principal" style="display:none">
+    <div class="metrics-grid">
+      <div class="metric-cell"><div class="metric-label">Total comissão</div><div class="metric-value" id="m-comissao">—</div><div class="metric-sub">no ciclo</div></div>
+      <div class="metric-cell"><div class="metric-label">Total recebido</div><div class="metric-value" id="m-recebido">—</div><div class="metric-sub">no ciclo</div></div>
+      <div class="metric-cell"><div class="metric-label">Operadores</div><div class="metric-value" id="m-ops">—</div><div class="metric-sub">com meta definida</div></div>
+      <div class="metric-cell"><div class="metric-label">Dias úteis restantes</div><div class="metric-value" id="m-du-rest">—</div><div class="metric-sub" id="m-du-sub">no ciclo</div></div>
+    </div>
+    <div class="sort-bar">
+      <span class="sort-label">Ordenar:</span>
+      <div class="sort-btns">
+        <button class="btn-sort active" onclick="sortBy('proj',event)">% Projeção</button>
+        <button class="btn-sort" onclick="sortBy('real',event)">% Realizado</button>
+        <button class="btn-sort" onclick="sortBy('comissao',event)">Comissão</button>
+        <button class="btn-sort" onclick="sortBy('nome',event)">Nome</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:48px">#</th>
+            <th>Operador</th>
+            <th class="right">Novos Acordos — Base</th>
+            <th class="right">Meta</th>
+            <th class="right">% Realizado</th>
+            <th class="right">Projeção R$</th>
+            <th class="right">% Projeção</th>
+            <th class="right">Novos Acordos</th>
+            <th class="right">Colchão</th>
+            <th class="right">Com. Total</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="empty-state" class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title">Ranking não disponível</div>
+    <div class="empty-sub">Aguardando publicação pelo administrador.</div>
+  </div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBNZXz8oeW7ufVjOHr_G6bM16Ekdc4s230",
+    authDomain: "ranking-viacerta.firebaseapp.com",
+    databaseURL: "https://ranking-viacerta-default-rtdb.firebaseio.com",
+    projectId: "ranking-viacerta",
+    storageBucket: "ranking-viacerta.appspot.com",
+    messagingSenderId: "716274938152",
+    appId: "1:716274938152:web:viacerta"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const hoje = new Date();
+  document.getElementById('topbar-date').textContent = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+  let dadosRanking = [], sortAtual = 'proj';
+
+  function fmt(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+  let historicoData = {};
+  let abaAtiva = 'atual';
+
+  function renderAbas(temAtual){
+    const bar = document.getElementById('tabs-bar');
+    bar.innerHTML = '';
+    if(temAtual){
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (abaAtiva==='atual'?' active':'');
+      btn.textContent = '● Ranking atual';
+      btn.onclick = () => trocarAba('atual');
+      bar.appendChild(btn);
+    }
+    // Histórico ordenado do mais recente pro mais antigo
+    Object.keys(historicoData).reverse().forEach(chave => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (abaAtiva===chave?' active':'');
+      btn.textContent = historicoData[chave].label || chave;
+      btn.onclick = () => trocarAba(chave);
+      bar.appendChild(btn);
+    });
+    bar.style.display = (temAtual || Object.keys(historicoData).length > 0) ? 'flex' : 'none';
+  }
+
+  function trocarAba(chave){
+    abaAtiva = chave;
+    if(chave === 'atual'){
+      dadosRanking = rankingAtualData ? rankingAtualData.ranking : [];
+      if(rankingAtualData) carregarMetrics(rankingAtualData);
+      document.getElementById('badge-atualizado').style.display = 'inline-block';
+    } else {
+      const h = historicoData[chave];
+      dadosRanking = h.ranking;
+      carregarMetrics(h);
+      document.getElementById('badge-atualizado').style.display = 'none';
+      const at = new Date(h.atualizadoEm);
+      document.getElementById('header-sub').textContent = 'Ciclo arquivado: ' + (h.label||chave) + ' · publicado em ' + at.toLocaleDateString('pt-BR');
+    }
+    renderAbas(!!rankingAtualData);
+    renderTabela();
+  }
+
+  function carregarMetrics(dados){
+    document.getElementById('m-comissao').textContent = fmt(dados.geralComissao);
+    document.getElementById('m-recebido').textContent = fmt(dados.geralRecebido);
+    document.getElementById('m-ops').textContent = dados.ranking.length;
+    document.getElementById('m-du-rest').textContent = dados.restWD;
+    document.getElementById('m-du-sub').textContent = 'de '+dados.totalWD+' úteis no ciclo';
+  }
+
+  let rankingAtualData = null;
+
+  // Escuta ranking atual em tempo real
+  db.ref('ranking/atual').on('value', snap => {
+    rankingAtualData = snap.val();
+    if(abaAtiva === 'atual'){
+      if (!rankingAtualData) {
+        if(Object.keys(historicoData).length === 0){
+          document.getElementById('empty-state').style.display = 'block';
+          document.getElementById('conteudo-principal').style.display = 'none';
+          document.getElementById('tabs-bar').style.display = 'none';
+          document.getElementById('header-sub').textContent = 'Aguardando publicação pelo administrador.';
+        } else {
+          // Sem ranking atual mas tem histórico — mostra primeira aba do histórico
+          abaAtiva = Object.keys(historicoData)[Object.keys(historicoData).length-1];
+          trocarAba(abaAtiva);
+        }
+        renderAbas(false);
+        return;
+      }
+      dadosRanking = rankingAtualData.ranking;
+      carregarMetrics(rankingAtualData);
+      const at = new Date(rankingAtualData.atualizadoEm);
+      document.getElementById('header-sub').textContent =
+        'Atualizado em '+at.toLocaleDateString('pt-BR')+' às '+at.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+
+        ' · '+rankingAtualData.workedWD+' dias úteis trabalhados de '+rankingAtualData.totalWD;
+      document.getElementById('badge-atualizado').style.display = 'inline-block';
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('conteudo-principal').style.display = 'block';
+      renderTabela();
+    }
+    renderAbas(!!rankingAtualData);
+  });
+
+  // Escuta histórico em tempo real
+  db.ref('ranking/historico').on('value', snap => {
+    historicoData = snap.val() || {};
+    renderAbas(!!rankingAtualData);
+    if(Object.keys(historicoData).length > 0 || rankingAtualData){
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('conteudo-principal').style.display = 'block';
+    }
+  });
+
+  function renderTabela(){
+    let sorted=[...dadosRanking];
+    if(sortAtual==='proj')sorted.sort((a,b)=>b.projPct-a.projPct);
+    else if(sortAtual==='real')sorted.sort((a,b)=>b.realPct-a.realPct);
+    else if(sortAtual==='comissao')sorted.sort((a,b)=>b.cmTotal-a.cmTotal);
+    else if(sortAtual==='nome')sorted.sort((a,b)=>a.op.localeCompare(b.op));
+    const tbody=document.getElementById('table-body');
+    tbody.innerHTML='';
+    sorted.forEach((r,i)=>{
+      const rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+      const realClass=r.realPct>=100?'pct-green':r.realPct>=80?'pct-amber':'pct-red';
+      const projClass=r.projPct>=100?'pct-green':r.projPct>=80?'pct-amber':'pct-red';
+      const barClass=r.realPct>=100?'bar-green':r.realPct>=80?'bar-amber':'bar-red';
+      const barProjClass=r.projPct>=100?'bar-green':r.projPct>=80?'bar-amber':'bar-red';
+      const dotClass=r.projPct>=100?'dot-green':r.projPct>=80?'dot-amber':'dot-red';
+      const barW=Math.min(100,Math.round(r.realPct));
+      const barProjW=Math.min(100,Math.round(r.projPct));
+      const nome=r.op.replace(/^\d+\s*-\s*/,'');
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+        <td style="font-weight:600">${nome}</td>
+        <td class="right">${fmt(r.base)}</td>
+        <td class="right muted">${r.meta>0?fmt(r.meta):'—'}</td>
+        <td class="right"><div class="bar-cell"><div class="bar-track"><div class="bar-fill ${barClass}" style="width:${barW}%"></div></div><span class="${realClass}" style="min-width:46px">${r.realPct.toFixed(1)}%</span></div></td>
+        <td class="right muted">${fmt(r.projVal)}</td>
+        <td class="right"><div class="bar-cell"><span class="dot ${dotClass}"></span><div class="bar-track"><div class="bar-fill ${barProjClass}" style="width:${barProjW}%"></div></div><span class="${projClass}" style="min-width:46px">${r.projPct.toFixed(1)}%</span></div></td>
+        <td class="right muted" style="font-size:12px">${fmt(r.cm16)}</td>
+        <td class="right muted" style="font-size:12px">${fmt(r.cmNeg)}</td>
+        <td class="right" style="font-weight:600;color:var(--teal)">${fmt(r.cmTotal)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function sortBy(key,e){
+    sortAtual=key;
+    document.querySelectorAll('.btn-sort').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    renderTabela();
+  }
+</script>
+</body>
+</html>
